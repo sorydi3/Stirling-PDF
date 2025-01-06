@@ -20,7 +20,7 @@
         <br><br>
         <div class="container">
           <div class="row justify-content-center">
-            <div class="col-md-12 bg-card">
+            <div class="col-md-6 bg-card">
               <div class="tool-header">
                 <span class="material-symbols-rounded tool-header-icon advance">javascript</span>
                 <span class="tool-header-text" th:text="#{showJS.header}"></span>
@@ -30,7 +30,7 @@
                 <br>
                 <button type="submit" id="submitBtn" class="btn btn-primary" th:text="#{showJS.submit}"></button>
               </form>
-              <div class="container mt-5">
+              <div class="container mt-4">
                 <!-- Iterate over each main section in the JSON -->
                 <div id="script-content">
                   <!-- JavaScript will populate this section -->
@@ -39,6 +39,7 @@
                 <!-- Button to download the JSON -->
                 <a href="#" id="downloadJS" class="btn btn-primary mt-3" style="display: none;" th:text="#{showJS.downloadJS}">Download JSON</a>
               </div>
+              <script th:src="@{'/js/fetch-utils.js'}"></script>
               <script>
                 document.querySelector('#pdfInfoForm').addEventListener('submit', function(event){
                   event.preventDefault();
@@ -46,7 +47,7 @@
                   // Fetch the formData
                   const formData = new FormData(event.target);
 
-                  fetch('api/v1/misc/show-javascript', {
+                  fetchWithCsrf('api/v1/misc/show-javascript', {
                     method: 'POST',
                     body: formData
                   }).then(response => response.text())

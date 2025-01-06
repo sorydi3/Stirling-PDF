@@ -1,15 +1,16 @@
 package stirling.software.SPDF;
 
 import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -20,65 +21,84 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import io.github.pixee.security.SystemCommand;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
+import stirling.software.SPDF.UI.WebBrowser;
 import stirling.software.SPDF.config.ConfigInitializer;
+import stirling.software.SPDF.config.InstallationPathConfig;
 import stirling.software.SPDF.model.ApplicationProperties;
 
 @SpringBootApplication
 @EnableScheduling
+@Slf4j
 public class SPdfApplication {
 
-    private static final Logger logger = LoggerFactory.getLogger(SPdfApplication.class);
-
-    @Autowired private Environment env;
-
-    @Autowired ApplicationProperties applicationProperties;
-
+    private static String baseUrlStatic;
     private static String serverPortStatic;
+    private final Environment env;
+    private final ApplicationProperties applicationProperties;
+    private final WebBrowser webBrowser;
 
-    @Value("${server.port:8080}")
-    public void setServerPortStatic(String port) {
-        SPdfApplication.serverPortStatic = port;
+    @Value("${baseUrl:http://localhost}")
+    private String baseUrl;
+
+    public SPdfApplication(
+            Environment env,
+            ApplicationProperties applicationProperties,
+            @Autowired(required = false) WebBrowser webBrowser) {
+        this.env = env;
+        this.applicationProperties = applicationProperties;
+        this.webBrowser = webBrowser;
     }
 
-    @PostConstruct
-    public void init() {
-        // Check if the BROWSER_OPEN environment variable is set to true
-        String browserOpenEnv = env.getProperty("BROWSER_OPEN");
-        boolean browserOpen = browserOpenEnv != null && "true".equalsIgnoreCase(browserOpenEnv);
-        if (browserOpen) {
-            try {
-                String url = "http://localhost:" + getNonStaticPort();
-
-                String os = System.getProperty("os.name").toLowerCase();
-                Runtime rt = Runtime.getRuntime();
-                if (os.contains("win")) {
-                    // For Windows
-                    SystemCommand.runCommand(rt, "rundll32 url.dll,FileProtocolHandler " + url);
-                }
-            } catch (Exception e) {
-                logger.error("Error opening browser: {}", e.getMessage());
-            }
+    // Optionally keep this method if you want to provide a manual port-incrementation fallback.
+    private static String findAvailablePort(int startPort) {
+        int port = startPort;
+        while (!isPortAvailable(port)) {
+            port++;
         }
-        logger.info("Running configs {}", applicationProperties.toString());
+        return String.valueOf(port);
+    }
+
+    private static boolean isPortAvailable(int port) {
+        try (ServerSocket socket = new ServerSocket(port)) {
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-
         SpringApplication app = new SpringApplication(SPdfApplication.class);
+        Properties props = new Properties();
+        if (Boolean.parseBoolean(System.getProperty("STIRLING_PDF_DESKTOP_UI", "false"))) {
+            System.setProperty("java.awt.headless", "false");
+            app.setHeadless(false);
+            props.put("java.awt.headless", "false");
+            props.put("spring.main.web-application-type", "servlet");
+        }
         app.setAdditionalProfiles("default");
-        app.addInitializers(new ConfigInitializer());
-        Map<String, String> propertyFiles = new HashMap<>();
 
-        // stirling pdf settings file
-        if (Files.exists(Paths.get("configs/settings.yml"))) {
-            propertyFiles.put("spring.config.additional-location", "file:configs/settings.yml");
-        } else {
-            logger.warn(
-                    "External configuration file 'configs/settings.yml' does not exist. Using default configuration and environment configuration instead.");
+        ConfigInitializer initializer = new ConfigInitializer();
+        try {
+            initializer.ensureConfigExists();
+        } catch (IOException | URISyntaxException e) {
+            log.error("Error initialising configuration", e);
         }
 
-        // custom javs settings file
-        if (Files.exists(Paths.get("configs/custom_settings.yml"))) {
+        Map<String, String> propertyFiles = new HashMap<>();
+        // External config files
+        log.info("Settings file: {}", InstallationPathConfig.getSettingsPath());
+        if (Files.exists(Paths.get(InstallationPathConfig.getSettingsPath()))) {
+            propertyFiles.put(
+                    "spring.config.additional-location",
+                    "file:" + InstallationPathConfig.getSettingsPath());
+        } else {
+            log.warn(
+                    "External configuration file '{}' does not exist.",
+                    InstallationPathConfig.getSettingsPath());
+        }
+        if (Files.exists(Paths.get(InstallationPathConfig.getCustomSettingsPath()))) {
             String existingLocation =
                     propertyFiles.getOrDefault("spring.config.additional-location", "");
             if (!existingLocation.isEmpty()) {
@@ -86,44 +106,98 @@ public class SPdfApplication {
             }
             propertyFiles.put(
                     "spring.config.additional-location",
-                    existingLocation + "file:configs/custom_settings.yml");
+                    existingLocation + "file:" + InstallationPathConfig.getCustomSettingsPath());
         } else {
-            logger.warn("Custom configuration file 'configs/custom_settings.yml' does not exist.");
+            log.warn(
+                    "Custom configuration file '{}' does not exist.",
+                    InstallationPathConfig.getCustomSettingsPath());
         }
-
+        Properties finalProps = new Properties();
         if (!propertyFiles.isEmpty()) {
-            app.setDefaultProperties(
+            finalProps.putAll(
                     Collections.singletonMap(
                             "spring.config.additional-location",
                             propertyFiles.get("spring.config.additional-location")));
         }
-
-        app.run(args);
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Thread interrupted while sleeping", e);
+        if (!props.isEmpty()) {
+            finalProps.putAll(props);
         }
-
+        app.setDefaultProperties(finalProps);
+        app.run(args);
+        // Ensure directories are created
         try {
-            Files.createDirectories(Path.of("customFiles/static/"));
-            Files.createDirectories(Path.of("customFiles/templates/"));
+            Files.createDirectories(Path.of(InstallationPathConfig.getTemplatesPath()));
+            Files.createDirectories(Path.of(InstallationPathConfig.getStaticPath()));
         } catch (Exception e) {
-            logger.error("Error creating directories: {}", e.getMessage());
+            log.error("Error creating directories: {}", e.getMessage());
         }
         printStartupLogs();
     }
 
     private static void printStartupLogs() {
-        logger.info("Stirling-PDF Started.");
-        String url = "http://localhost:" + getStaticPort();
-        logger.info("Navigate to {}", url);
+        log.info("Stirling-PDF Started.");
+        String url = baseUrlStatic + ":" + getStaticPort();
+        log.info("Navigate to {}", url);
+    }
+
+    public static String getStaticBaseUrl() {
+        return baseUrlStatic;
     }
 
     public static String getStaticPort() {
         return serverPortStatic;
+    }
+
+    @Value("${server.port:8080}")
+    public void setServerPortStatic(String port) {
+        if ("auto".equalsIgnoreCase(port)) {
+            // Use Spring Boot's automatic port assignment (server.port=0)
+            SPdfApplication.serverPortStatic = // This will let Spring Boot assign an available port
+                    "0";
+        } else {
+            SPdfApplication.serverPortStatic = port;
+        }
+    }
+
+    @PostConstruct
+    public void init() {
+        baseUrlStatic = this.baseUrl;
+        String url = baseUrl + ":" + getStaticPort();
+        if (webBrowser != null
+                && Boolean.parseBoolean(System.getProperty("STIRLING_PDF_DESKTOP_UI", "false"))) {
+            webBrowser.initWebUI(url);
+        } else {
+            String browserOpenEnv = env.getProperty("BROWSER_OPEN");
+            boolean browserOpen = browserOpenEnv != null && "true".equalsIgnoreCase(browserOpenEnv);
+            if (browserOpen) {
+                try {
+                    String os = System.getProperty("os.name").toLowerCase();
+                    Runtime rt = Runtime.getRuntime();
+                    if (os.contains("win")) {
+                        // For Windows
+                        SystemCommand.runCommand(rt, "rundll32 url.dll,FileProtocolHandler " + url);
+                    } else if (os.contains("mac")) {
+                        SystemCommand.runCommand(rt, "open " + url);
+                    } else if (os.contains("nix") || os.contains("nux")) {
+                        SystemCommand.runCommand(rt, "xdg-open " + url);
+                    }
+                } catch (Exception e) {
+                    log.error("Error opening browser: {}", e.getMessage());
+                }
+            }
+        }
+        log.info("Running configs {}", applicationProperties.toString());
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        if (webBrowser != null) {
+            webBrowser.cleanup();
+        }
+    }
+
+    public String getNonStaticBaseUrl() {
+        return baseUrlStatic;
     }
 
     public String getNonStaticPort() {

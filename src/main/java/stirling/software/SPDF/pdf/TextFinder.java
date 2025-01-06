@@ -10,24 +10,16 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 
+import lombok.extern.slf4j.Slf4j;
 import stirling.software.SPDF.model.PDFText;
 
+@Slf4j
 public class TextFinder extends PDFTextStripper {
 
     private final String searchText;
     private final boolean useRegex;
     private final boolean wholeWordSearch;
     private final List<PDFText> textOccurrences = new ArrayList<>();
-
-    private class MatchInfo {
-        int startIndex;
-        int matchLength;
-
-        MatchInfo(int startIndex, int matchLength) {
-            this.startIndex = startIndex;
-            this.matchLength = matchLength;
-        }
-    }
 
     public TextFinder(String searchText, boolean useRegex, boolean wholeWordSearch)
             throws IOException {
@@ -92,7 +84,7 @@ public class TextFinder extends PDFTextStripper {
 
     public List<PDFText> getTextLocations(PDDocument document) throws Exception {
         this.getText(document);
-        System.out.println(
+        log.debug(
                 "Found "
                         + textOccurrences.size()
                         + " occurrences of '"
@@ -100,5 +92,15 @@ public class TextFinder extends PDFTextStripper {
                         + "' in the document.");
 
         return textOccurrences;
+    }
+
+    private class MatchInfo {
+        int startIndex;
+        int matchLength;
+
+        MatchInfo(int startIndex, int matchLength) {
+            this.startIndex = startIndex;
+            this.matchLength = matchLength;
+        }
     }
 }

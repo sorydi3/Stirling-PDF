@@ -18,10 +18,10 @@
               </div>
               <form id="pdfInfoForm" method="post" enctype="multipart/form-data" th:action="@{'/api/v1/security/get-info-on-pdf'}">
                 <div th:replace="~{fragments/common :: fileSelector(name='fileInput', multipleInputsForSingleRequest=false, remoteCall='false', accept='application/pdf')}"></div>
-                <br>
+
                 <button type="submit" id="submitBtn" class="btn btn-primary" th:text="#{getPdfInfo.submit}"></button>
               </form>
-              <div class="container mt-5">
+              <div class="container mt-0">
                 <!-- Iterate over each main section in the JSON -->
                 <div id="json-content">
                   <!-- JavaScript will populate this section -->
@@ -30,13 +30,15 @@
                 <!-- Button to download the JSON -->
                 <a href="#" id="downloadJson" class="btn btn-primary mt-3" style="display: none;" th:text="#{getPdfInfo.downloadJson}">Download JSON</a>
               </div>
+              <script th:src="@{'/js/fetch-utils.js'}"></script>
               <script>
+
                 document.getElementById("pdfInfoForm").addEventListener("submit", function(event) {
                   event.preventDefault();
 
                   const formData = new FormData(event.target);
 
-                  fetch('api/v1/security/get-info-on-pdf', {
+                  fetchWithCsrf('api/v1/security/get-info-on-pdf', {
                     method: 'POST',
                     body: formData
                   }).then(response => response.json()).then(data => {

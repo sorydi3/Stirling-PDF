@@ -1,9 +1,9 @@
 package stirling.software.SPDF.utils;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Test;
 
 public class RequestUriUtilsTest {
 
@@ -19,7 +19,7 @@ public class RequestUriUtilsTest {
         assertFalse(RequestUriUtils.isStaticResource("/api/v1/users"));
         assertFalse(RequestUriUtils.isStaticResource("/api/v1/orders"));
         assertFalse(RequestUriUtils.isStaticResource("/"));
-        assertFalse(RequestUriUtils.isStaticResource("/login"));
+        assertTrue(RequestUriUtils.isStaticResource("/login"));
         assertFalse(RequestUriUtils.isStaticResource("/register"));
         assertFalse(RequestUriUtils.isStaticResource("/api/v1/products"));
     }

@@ -12,8 +12,7 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,17 +24,23 @@ import io.github.pixee.security.Filenames;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import stirling.software.SPDF.model.PdfMetadata;
+import lombok.extern.slf4j.Slf4j;
 import stirling.software.SPDF.model.api.misc.FlattenRequest;
-import stirling.software.SPDF.utils.PdfUtils;
+import stirling.software.SPDF.service.CustomPDDocumentFactory;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
 @RestController
 @RequestMapping("/api/v1/misc")
+@Slf4j
 @Tag(name = "Misc", description = "Miscellaneous APIs")
 public class FlattenController {
 
-    private static final Logger logger = LoggerFactory.getLogger(FlattenController.class);
+    private final CustomPDDocumentFactory pdfDocumentFactory;
+
+    @Autowired
+    public FlattenController(CustomPDDocumentFactory pdfDocumentFactory) {
+        this.pdfDocumentFactory = pdfDocumentFactory;
+    }
 
     @PostMapping(consumes = "multipart/form-data", value = "/flatten")
     @Operation(
@@ -46,7 +51,6 @@ public class FlattenController {
         MultipartFile file = request.getFileInput();
 
         PDDocument document = Loader.loadPDF(file.getBytes());
-        PdfMetadata metadata = PdfUtils.extractMetadataFromPdf(document);
         Boolean flattenOnlyForms = request.getFlattenOnlyForms();
 
         if (Boolean.TRUE.equals(flattenOnlyForms)) {
@@ -60,7 +64,8 @@ public class FlattenController {
             // flatten whole page aka convert each page to image and readd it (making text
             // unselectable)
             PDFRenderer pdfRenderer = new PDFRenderer(document);
-            PDDocument newDocument = new PDDocument();
+            PDDocument newDocument =
+                    pdfDocumentFactory.createNewDocumentBasedOnOldDocument(document);
             int numPages = document.getNumberOfPages();
             for (int i = 0; i < numPages; i++) {
                 try {
@@ -77,10 +82,9 @@ public class FlattenController {
                         contentStream.drawImage(pdImage, 0, 0, pageWidth, pageHeight);
                     }
                 } catch (IOException e) {
-                    logger.error("exception", e);
+                    log.error("exception", e);
                 }
             }
-            PdfUtils.setMetadataToPdf(newDocument, metadata);
             return WebResponseUtils.pdfDocToWebResponse(
                     newDocument, Filenames.toSimpleFileName(file.getOriginalFilename()));
         }

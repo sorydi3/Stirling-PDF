@@ -7,8 +7,8 @@
 }
 
 #navbarSearch.show {
-  max-height: 300px;
-  /* Adjust this to your desired max height */
+  height: auto;
+  /*dynamically changes height*/
 }
 
 #searchResults .dropdown-item {
@@ -89,6 +89,14 @@
   width: 80%;
 }
 
+.close-icon {
+  color: var(--md-sys-color-secondary);
+}
+
+.close-icon:hover {
+  transform: scale(1.15);
+}
+
 span.icon-text::after {
   content: attr(data-text);
   content: attr(data-text) / "";
@@ -128,6 +136,34 @@ span.icon-text::after {
   color: var(--md-sys-color-on-surface-variant);
 }
 
+.nav-item {
+  position: relative;
+}
+
+/* .tooltip-text {
+  visibility: hidden;
+  background-color: rgb(71 67 67 / 80%);
+  color: #fff;
+  text-align: center;
+  border-radius: 4px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 12px;
+  white-space: nowrap;
+  margin-top: 5px;
+}
+
+.nav-item:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+} */
+
 .dropdown-menu.scrollable-y {
   overflow-y: scroll;
   height: 360px;
@@ -136,7 +172,7 @@ span.icon-text::after {
 /* Dropdown Scrollbar*/
 .scrollable-y {
   overflow-y: scroll;
-  height: 360px;
+  height: 190px;
 }
 
 .scrollable-y::-webkit-scrollbar {
@@ -240,6 +276,7 @@ span.icon-text::after {
 /* Dropdown min-width */
 .dropdown-mw-28 {
   min-width: 280px;
+  min-height: 50px;
 }
 
 .dropdown-mw-20 {
@@ -286,7 +323,54 @@ span.icon-text::after {
     display: block;
     margin-top: 0;
   }
+
+  /* .icon-hide {
+    display: none;
+  } */
+}
+
+@media (max-width:1199px) {
+  .icon-hide {
+    display: inline-flex;
+  }
+}
+
+@media (min-width:1200px) {
   .icon-hide {
     display: none;
   }
+}
+
+.go-pro-link {
+   position: relative;
+   padding: 0.5rem 1rem;
+   transition: all 0.3s ease;
+   z-index: 1;
+   display: inline-block;
+   width: auto;
+}
+
+.go-pro-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #ffffff;
+  background-color: #007bff;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+.go-pro-link:hover .go-pro-badge {
+  background-color: #0056b3;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+#stacked {
+  gap: 1rem;
+}
+
+#stacked > .navbar-item {
+  margin: 0;
 }

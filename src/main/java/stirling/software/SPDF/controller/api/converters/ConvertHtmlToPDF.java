@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import stirling.software.SPDF.model.api.converters.HTMLToPdfRequest;
+import stirling.software.SPDF.service.CustomPDDocumentFactory;
 import stirling.software.SPDF.utils.FileToPdf;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
@@ -22,9 +23,17 @@ import stirling.software.SPDF.utils.WebResponseUtils;
 @RequestMapping("/api/v1/convert")
 public class ConvertHtmlToPDF {
 
+    private final boolean bookAndHtmlFormatsInstalled;
+
+    private final CustomPDDocumentFactory pdfDocumentFactory;
+
     @Autowired
-    @Qualifier("bookAndHtmlFormatsInstalled")
-    private boolean bookAndHtmlFormatsInstalled;
+    public ConvertHtmlToPDF(
+            CustomPDDocumentFactory pdfDocumentFactory,
+            @Qualifier("bookAndHtmlFormatsInstalled") boolean bookAndHtmlFormatsInstalled) {
+        this.pdfDocumentFactory = pdfDocumentFactory;
+        this.bookAndHtmlFormatsInstalled = bookAndHtmlFormatsInstalled;
+    }
 
     @PostMapping(consumes = "multipart/form-data", value = "/html/pdf")
     @Operation(
@@ -51,6 +60,8 @@ public class ConvertHtmlToPDF {
                         fileInput.getBytes(),
                         originalFilename,
                         bookAndHtmlFormatsInstalled);
+
+        pdfBytes = pdfDocumentFactory.createNewBytesBasedOnOldDocument(pdfBytes);
 
         String outputFilename =
                 originalFilename.replaceFirst("[.][^.]+$", "")

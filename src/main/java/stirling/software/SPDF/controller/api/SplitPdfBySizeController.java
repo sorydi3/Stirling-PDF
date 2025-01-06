@@ -10,8 +10,7 @@ import java.util.zip.ZipOutputStream;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -24,16 +23,24 @@ import io.github.pixee.security.Filenames;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import lombok.extern.slf4j.Slf4j;
 import stirling.software.SPDF.model.api.general.SplitPdfBySizeOrCountRequest;
+import stirling.software.SPDF.service.CustomPDDocumentFactory;
 import stirling.software.SPDF.utils.GeneralUtils;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
 @RestController
 @RequestMapping("/api/v1/general")
+@Slf4j
 @Tag(name = "General", description = "General APIs")
 public class SplitPdfBySizeController {
 
-    private static final Logger logger = LoggerFactory.getLogger(SplitPdfBySizeController.class);
+    private final CustomPDDocumentFactory pdfDocumentFactory;
+
+    @Autowired
+    public SplitPdfBySizeController(CustomPDDocumentFactory pdfDocumentFactory) {
+        this.pdfDocumentFactory = pdfDocumentFactory;
+    }
 
     @PostMapping(value = "/split-by-size-or-count", consumes = "multipart/form-data")
     @Operation(
@@ -70,7 +77,7 @@ public class SplitPdfBySizeController {
             }
 
         } catch (Exception e) {
-            logger.error("exception", e);
+            log.error("exception", e);
         } finally {
             data = Files.readAllBytes(zipFile);
             Files.deleteIfExists(zipFile);
@@ -84,7 +91,8 @@ public class SplitPdfBySizeController {
             PDDocument sourceDocument, long maxBytes, ZipOutputStream zipOut, String baseFilename)
             throws IOException {
         long currentSize = 0;
-        PDDocument currentDoc = new PDDocument();
+        PDDocument currentDoc =
+                pdfDocumentFactory.createNewDocumentBasedOnOldDocument(sourceDocument);
         int fileIndex = 1;
 
         for (int pageIndex = 0; pageIndex < sourceDocument.getNumberOfPages(); pageIndex++) {
@@ -121,7 +129,8 @@ public class SplitPdfBySizeController {
             PDDocument sourceDocument, int pageCount, ZipOutputStream zipOut, String baseFilename)
             throws IOException {
         int currentPageCount = 0;
-        PDDocument currentDoc = new PDDocument();
+        PDDocument currentDoc =
+                pdfDocumentFactory.createNewDocumentBasedOnOldDocument(sourceDocument);
         int fileIndex = 1;
         for (PDPage page : sourceDocument.getPages()) {
             currentDoc.addPage(page);
@@ -152,7 +161,8 @@ public class SplitPdfBySizeController {
         int currentPageIndex = 0;
         int fileIndex = 1;
         for (int i = 0; i < documentCount; i++) {
-            PDDocument currentDoc = new PDDocument();
+            PDDocument currentDoc =
+                    pdfDocumentFactory.createNewDocumentBasedOnOldDocument(sourceDocument);
             int pagesToAdd = pagesPerDocument + (i < extraPages ? 1 : 0);
 
             for (int j = 0; j < pagesToAdd; j++) {

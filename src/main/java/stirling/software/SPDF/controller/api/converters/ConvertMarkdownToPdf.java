@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import stirling.software.SPDF.model.api.GeneralFile;
+import stirling.software.SPDF.service.CustomPDDocumentFactory;
 import stirling.software.SPDF.utils.FileToPdf;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
@@ -32,9 +33,17 @@ import stirling.software.SPDF.utils.WebResponseUtils;
 @RequestMapping("/api/v1/convert")
 public class ConvertMarkdownToPdf {
 
+    private final boolean bookAndHtmlFormatsInstalled;
+
+    private final CustomPDDocumentFactory pdfDocumentFactory;
+
     @Autowired
-    @Qualifier("bookAndHtmlFormatsInstalled")
-    private boolean bookAndHtmlFormatsInstalled;
+    public ConvertMarkdownToPdf(
+            CustomPDDocumentFactory pdfDocumentFactory,
+            @Qualifier("bookAndHtmlFormatsInstalled") boolean bookAndHtmlFormatsInstalled) {
+        this.pdfDocumentFactory = pdfDocumentFactory;
+        this.bookAndHtmlFormatsInstalled = bookAndHtmlFormatsInstalled;
+    }
 
     @PostMapping(consumes = "multipart/form-data", value = "/markdown/pdf")
     @Operation(
@@ -73,7 +82,7 @@ public class ConvertMarkdownToPdf {
                         htmlContent.getBytes(),
                         "converted.html",
                         bookAndHtmlFormatsInstalled);
-
+        pdfBytes = pdfDocumentFactory.createNewBytesBasedOnOldDocument(pdfBytes);
         String outputFilename =
                 originalFilename.replaceFirst("[.][^.]+$", "")
                         + ".pdf"; // Remove file extension and append .pdf

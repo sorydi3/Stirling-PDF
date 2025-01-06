@@ -17,7 +17,7 @@
                 <span class="tool-header-text" th:text="#{watermark.header}"></span>
               </div>
 
-              <form method="post" enctype="multipart/form-data" action="api/v1/security/add-watermark">
+              <form method="post" enctype="multipart/form-data" th:action="@{'api/v1/security/add-watermark'}">
                 <div class="mb-3">
                   <label th:text="#{watermark.selectText.1}"></label>
                   <div th:replace="~{fragments/common :: fileSelector(name='fileInput', multipleInputsForSingleRequest=false, accept='application/pdf')}"></div>
@@ -92,26 +92,48 @@
                   appendPercentageSymbol();
                 </script>
 
-                <div class="mb-3">
-                  <label for="rotation" th:text="#{watermark.selectText.4}"></label>
-                  <input type="text" id="rotation" name="rotation" class="form-control" value="45">
-                </div>
-                <div class="mb-3">
-                  <label for="widthSpacer" th:text="#{watermark.selectText.5}"></label>
-                  <input type="text" id="widthSpacer" name="widthSpacer" class="form-control" value="50">
-                </div>
-                <div class="mb-3">
-                  <label for="heightSpacer" th:text="#{watermark.selectText.6}"></label>
-                  <input type="text" id="heightSpacer" name="heightSpacer" class="form-control" value="50">
-                </div>
-                <div class="mb-3 form-check">
-                  <input type="checkbox" id="convertPDFToImage" name="convertPDFToImage">
-                  <label for="convertPDFToImage" th:text="#{watermark.selectText.10}"></label>
-                </div>
-                <div class="mb-3 text-center">
-                  <input type="submit" id="submitBtn" th:value="#{watermark.submit}" class="btn btn-primary">
-                </div>
-              </form>
+                        <div class="mb-3">
+                            <label for="rotation" th:text="#{watermark.selectText.4}"></label>
+                            <input type="text" id="rotation" name="rotation" class="form-control" value="45">
+                        </div>
+                        <div class="mb-3">
+                            <label for="widthSpacer" th:text="#{watermark.selectText.5}"></label>
+                            <input type="text" id="widthSpacer" name="widthSpacer" class="form-control" value="50">
+                        </div>
+                        <div class="mb-3">
+                            <label for="heightSpacer" th:text="#{watermark.selectText.6}"></label>
+                            <input type="text" id="heightSpacer" name="heightSpacer" class="form-control" value="50">
+                        </div>
+                        <div class="mb-3">
+                            <label for="customColor" class="form-label" th:text="#{watermark.customColor}">Custom
+                                Color</label>
+                            <div class="form-control form-control-color" style="background-color: #d3d3d3;">
+                                <input type="color" id="customColor" name="customColor" value="#d3d3d3">
+                            </div>
+                            <script>
+                                let colorInput = document.getElementById("customColor");
+                                if (colorInput) {
+                                  let colorInputContainer = colorInput.parentElement;
+                                  if (colorInputContainer) {
+                                    colorInput.onchange = function() {
+                                      colorInputContainer.style.backgroundColor = colorInput.value;
+                                    }
+                                    colorInputContainer.style.backgroundColor = colorInput.value;
+                                  }
+                                }
+
+                            </script>
+                        </div>
+
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" id="convertPDFToImage" name="convertPDFToImage">
+                            <label for="convertPDFToImage" th:text="#{watermark.selectText.10}"></label>
+                        </div>
+                        <div class="mb-3 text-left">
+                            <button type="submit" id="submitBtn" class="btn btn-primary" th:text="#{watermark.submit}"></button>
+                        </div>
+                    </form>
 
               <script>
                 function toggleFileOption() {
@@ -123,12 +145,18 @@
                   const watermarkImage = document.getElementById('watermarkImage');
 
                   if (watermarkType === 'text') {
+                    if (watermarkImage.hasAttribute('required')) {
+                      watermarkImage.removeAttribute('required');
+                    }
                     watermarkTextGroup.style.display = 'block';
                     watermarkText.required = true;
                     watermarkImageGroup.style.display = 'none';
                     watermarkImage.required = false;
                     alphabetGroup.style.display = 'block';
                   } else if (watermarkType === 'image') {
+                    if (watermarkImage.hasAttribute('required')) {
+                      watermarkImage.removeAttribute('required');
+                    }
                     watermarkTextGroup.style.display = 'none';
                     watermarkText.required = false;
                     watermarkImageGroup.style.display = 'block';

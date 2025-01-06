@@ -1,13 +1,13 @@
 package stirling.software.SPDF.model;
 
-import jakarta.persistence.*;
-
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "users")
@@ -111,12 +111,12 @@ public class User implements Serializable {
         this.enabled = enabled;
     }
 
-    public void setAuthenticationType(AuthenticationType authenticationType) {
-        this.authenticationType = authenticationType.toString().toLowerCase();
-    }
-
     public String getAuthenticationType() {
         return authenticationType;
+    }
+
+    public void setAuthenticationType(AuthenticationType authenticationType) {
+        this.authenticationType = authenticationType.toString().toLowerCase();
     }
 
     public Set<Authority> getAuthorities() {

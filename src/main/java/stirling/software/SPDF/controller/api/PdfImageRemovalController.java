@@ -3,16 +3,19 @@ package stirling.software.SPDF.controller.api;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import stirling.software.SPDF.model.api.PDFFile;
+import stirling.software.SPDF.service.CustomPDDocumentFactory;
 import stirling.software.SPDF.service.PdfImageRemovalService;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
@@ -22,18 +25,25 @@ import stirling.software.SPDF.utils.WebResponseUtils;
  */
 @RestController
 @RequestMapping("/api/v1/general")
+@Tag(name = "General", description = "General APIs")
 public class PdfImageRemovalController {
 
     // Service for removing images from PDFs
-    @Autowired private PdfImageRemovalService pdfImageRemovalService;
+    private final PdfImageRemovalService pdfImageRemovalService;
+
+    private final CustomPDDocumentFactory pdfDocumentFactory;
 
     /**
      * Constructor for dependency injection of PdfImageRemovalService.
      *
      * @param pdfImageRemovalService The service used for removing images from PDFs.
      */
-    public PdfImageRemovalController(PdfImageRemovalService pdfImageRemovalService) {
+    @Autowired
+    public PdfImageRemovalController(
+            PdfImageRemovalService pdfImageRemovalService,
+            CustomPDDocumentFactory pdfDocumentFactory) {
         this.pdfImageRemovalService = pdfImageRemovalService;
+        this.pdfDocumentFactory = pdfDocumentFactory;
     }
 
     /**
@@ -53,14 +63,8 @@ public class PdfImageRemovalController {
             description =
                     "This endpoint remove images from file to reduce the file size.Input:PDF Output:PDF Type:MISO")
     public ResponseEntity<byte[]> removeImages(@ModelAttribute PDFFile file) throws IOException {
-
-        MultipartFile pdf = file.getFileInput();
-
-        // Convert the MultipartFile to a byte array
-        byte[] pdfBytes = pdf.getBytes();
-
-        // Load the PDF document from the byte array
-        PDDocument document = Loader.loadPDF(pdfBytes);
+        // Load the PDF document
+        PDDocument document = pdfDocumentFactory.load(file);
 
         // Remove images from the PDF document using the service
         PDDocument modifiedDocument = pdfImageRemovalService.removeImagesFromPdf(document);
@@ -74,7 +78,8 @@ public class PdfImageRemovalController {
 
         // Generate a new filename for the modified PDF
         String mergedFileName =
-                pdf.getOriginalFilename().replaceFirst("[.][^.]+$", "") + "_removed_images.pdf";
+                file.getFileInput().getOriginalFilename().replaceFirst("[.][^.]+$", "")
+                        + "_removed_images.pdf";
 
         // Convert the byte array to a web response and return it
         return WebResponseUtils.bytesToWebResponse(outputStream.toByteArray(), mergedFileName);

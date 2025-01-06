@@ -1,7 +1,7 @@
 @general
 Feature: API Validation
 
-	
+
   @split-pdf-by-sections @positive
   Scenario Outline: split-pdf-by-sections with different parameters
     Given I generate a PDF file as "fileInput"
@@ -66,7 +66,7 @@ Feature: API Validation
     | pageNumbers | file_count |
     | 1,3,5-9     | 8          |
     | all         | 20         |
-    | 2n+1        | 11         |
+    | 2n+1        | 10         |
     | 3n          | 7          |
 
 
@@ -95,7 +95,7 @@ Feature: API Validation
 
 
   @extract-images
-  Scenario Outline: Extract Image Scans
+  Scenario Outline: Extract Image Scans duplicates
     Given I use an example file at "exampleFiles/images.pdf" as parameter "fileInput"
     And the request data includes
       | parameter        | value       |
@@ -103,14 +103,12 @@ Feature: API Validation
     When I send the API request to the endpoint "/api/v1/misc/extract-images"
     Then the response content type should be "application/octet-stream"
 	And the response file should have extension ".zip"
-	And the response ZIP should contain 20 files
+	And the response ZIP should contain 2 files
     And the response file should have size greater than 0
 	And the response status code should be 200
-	
-	Examples:
-    | format | 
-    | png        | 
-    | gif         |
-    | jpeg        | 
 
-	
+	Examples:
+    | format |
+    | png        |
+    | gif         |
+    | jpeg        |

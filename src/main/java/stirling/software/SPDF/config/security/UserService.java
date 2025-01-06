@@ -1,49 +1,81 @@
 package stirling.software.SPDF.config.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
-import stirling.software.SPDF.config.DatabaseBackupInterface;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.extern.slf4j.Slf4j;
+import stirling.software.SPDF.config.interfaces.DatabaseBackupInterface;
+import stirling.software.SPDF.config.security.saml2.CustomSaml2AuthenticatedPrincipal;
 import stirling.software.SPDF.config.security.session.SessionPersistentRegistry;
 import stirling.software.SPDF.controller.api.pipeline.UserServiceInterface;
-import stirling.software.SPDF.model.AuthenticationType;
-import stirling.software.SPDF.model.Authority;
-import stirling.software.SPDF.model.Role;
-import stirling.software.SPDF.model.User;
+import stirling.software.SPDF.model.*;
 import stirling.software.SPDF.repository.AuthorityRepository;
 import stirling.software.SPDF.repository.UserRepository;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
-
 @Service
+@Slf4j
 public class UserService implements UserServiceInterface {
 
-    @Autowired private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired private AuthorityRepository authorityRepository;
+    private final AuthorityRepository authorityRepository;
 
-    @Autowired private PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
-    @Autowired private MessageSource messageSource;
+    private final MessageSource messageSource;
 
-    @Autowired private SessionPersistentRegistry sessionRegistry;
+    private final SessionPersistentRegistry sessionRegistry;
 
-    @Autowired DatabaseBackupInterface databaseBackupHelper;
+    private final DatabaseBackupInterface databaseBackupHelper;
+
+    private final ApplicationProperties applicationProperties;
+
+    public UserService(
+            UserRepository userRepository,
+            AuthorityRepository authorityRepository,
+            PasswordEncoder passwordEncoder,
+            MessageSource messageSource,
+            SessionPersistentRegistry sessionRegistry,
+            DatabaseBackupInterface databaseBackupHelper,
+            ApplicationProperties applicationProperties) {
+        this.userRepository = userRepository;
+        this.authorityRepository = authorityRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.messageSource = messageSource;
+        this.sessionRegistry = sessionRegistry;
+        this.databaseBackupHelper = databaseBackupHelper;
+        this.applicationProperties = applicationProperties;
+    }
+
+    @Transactional
+    public void migrateOauth2ToSSO() {
+        userRepository
+                .findByAuthenticationTypeIgnoreCase("OAUTH2")
+                .forEach(
+                        user -> {
+                            user.setAuthenticationType(AuthenticationType.SSO);
+                            userRepository.save(user);
+                        });
+    }
 
     // Handle OAUTH2 login and user auto creation.
-    public boolean processOAuth2PostLogin(String username, boolean autoCreateUser)
+    public boolean processSSOPostLogin(String username, boolean autoCreateUser)
             throws IllegalArgumentException, IOException {
         if (!isUsernameValid(username)) {
             return false;
@@ -53,7 +85,7 @@ public class UserService implements UserServiceInterface {
             return true;
         }
         if (autoCreateUser) {
-            saveUser(username, AuthenticationType.OAUTH2);
+            saveUser(username, AuthenticationType.SSO);
             return true;
         }
         return false;
@@ -64,13 +96,11 @@ public class UserService implements UserServiceInterface {
         if (!user.isPresent()) {
             throw new UsernameNotFoundException("API key is not valid");
         }
-
         // Convert the user into an Authentication object
-        return new UsernamePasswordAuthenticationToken(
-                user, // principal (typically the user)
-                null, // credentials (we don't expose the password or API key here)
-                getAuthorities(user.get()) // user's authorities (roles/permissions)
-                );
+        return new UsernamePasswordAuthenticationToken( // principal (typically the user)
+                user, // credentials (we don't expose the password or API key here)
+                null, // user's authorities (roles/permissions)
+                getAuthorities(user.get()));
     }
 
     private Collection<? extends GrantedAuthority> getAuthorities(User user) {
@@ -84,7 +114,8 @@ public class UserService implements UserServiceInterface {
         String apiKey;
         do {
             apiKey = UUID.randomUUID().toString();
-        } while (userRepository.findByApiKey(apiKey).isPresent()); // Ensure uniqueness
+        } while ( // Ensure uniqueness
+        userRepository.findByApiKey(apiKey).isPresent());
         return apiKey;
     }
 
@@ -98,7 +129,8 @@ public class UserService implements UserServiceInterface {
     }
 
     public User refreshApiKeyForUser(String username) {
-        return addApiKeyToUser(username); // reuse the add API key method for refreshing
+        // reuse the add API key method for refreshing
+        return addApiKeyToUser(username);
     }
 
     public String getApiKeyForUser(String username) {
@@ -118,11 +150,11 @@ public class UserService implements UserServiceInterface {
 
     public Optional<User> loadUserByApiKey(String apiKey) {
         Optional<User> user = userRepository.findByApiKey(apiKey);
-
         if (user.isPresent()) {
             return user;
         }
-        return null; // or throw an exception
+        // or throw an exception
+        return null;
     }
 
     public boolean validateApiKeyForUser(String username, String apiKey) {
@@ -220,14 +252,12 @@ public class UserService implements UserServiceInterface {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             Map<String, String> settingsMap = user.getSettings();
-
             if (settingsMap == null) {
                 settingsMap = new HashMap<>();
             }
             settingsMap.clear();
             settingsMap.putAll(updates);
             user.setSettings(settingsMap);
-
             userRepository.save(user);
             databaseBackupHelper.exportDatabase();
         }
@@ -296,7 +326,10 @@ public class UserService implements UserServiceInterface {
         boolean isValidEmail =
                 username.matches(
                         "^(?=.{1,64}@)[A-Za-z0-9]+(\\.[A-Za-z0-9_+.-]+)*@[^-][A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$");
-        return isValidSimpleUsername || isValidEmail;
+        List<String> notAllowedUserList = new ArrayList<>();
+        notAllowedUserList.add("ALL_USERS".toLowerCase());
+        boolean notAllowedUser = notAllowedUserList.contains(username.toLowerCase());
+        return (isValidSimpleUsername || isValidEmail) && !notAllowedUser;
     }
 
     private String getInvalidUsernameMessage() {
@@ -332,6 +365,10 @@ public class UserService implements UserServiceInterface {
                 } else if (principal instanceof OAuth2User) {
                     OAuth2User oAuth2User = (OAuth2User) principal;
                     usernameP = oAuth2User.getName();
+                } else if (principal instanceof CustomSaml2AuthenticatedPrincipal) {
+                    CustomSaml2AuthenticatedPrincipal saml2User =
+                            (CustomSaml2AuthenticatedPrincipal) principal;
+                    usernameP = saml2User.getName();
                 } else if (principal instanceof String) {
                     usernameP = (String) principal;
                 }
@@ -340,5 +377,57 @@ public class UserService implements UserServiceInterface {
                 }
             }
         }
+    }
+
+    public String getCurrentUsername() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+            return ((UserDetails) principal).getUsername();
+        } else if (principal instanceof OAuth2User) {
+            return ((OAuth2User) principal)
+                    .getAttribute(
+                            applicationProperties.getSecurity().getOauth2().getUseAsUsername());
+        } else if (principal instanceof CustomSaml2AuthenticatedPrincipal) {
+            return ((CustomSaml2AuthenticatedPrincipal) principal).getName();
+        } else if (principal instanceof String) {
+            return (String) principal;
+        } else {
+            return principal.toString();
+        }
+    }
+
+    @Transactional
+    public void syncCustomApiUser(String customApiKey) throws IOException {
+        if (customApiKey == null || customApiKey.trim().length() == 0) {
+            return;
+        }
+        String username = "CUSTOM_API_USER";
+        Optional<User> existingUser = findByUsernameIgnoreCase(username);
+        if (!existingUser.isPresent()) {
+            // Create new user with API role
+            User user = new User();
+            user.setUsername(username);
+            user.setPassword(UUID.randomUUID().toString());
+            user.setEnabled(true);
+            user.setFirstLogin(false);
+            user.setAuthenticationType(AuthenticationType.WEB);
+            user.setApiKey(customApiKey);
+            user.addAuthority(new Authority(Role.INTERNAL_API_USER.getRoleId(), user));
+            userRepository.save(user);
+            databaseBackupHelper.exportDatabase();
+        } else {
+            // Update API key if it has changed
+            User user = existingUser.get();
+            if (!customApiKey.equals(user.getApiKey())) {
+                user.setApiKey(customApiKey);
+                userRepository.save(user);
+                databaseBackupHelper.exportDatabase();
+            }
+        }
+    }
+
+    @Override
+    public long getTotalUsersCount() {
+        return userRepository.count();
     }
 }

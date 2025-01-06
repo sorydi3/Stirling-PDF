@@ -67,7 +67,7 @@
                       th:replace="~{fragments/common :: fileSelector(name='fileInput', multipleInputsForSingleRequest=true)}"
                     ></div>
                   </div>
-                  <div class="element-margin">
+                  <div class="element-margin text-start">
                     <button
                       class="btn btn-primary"
                       id="submitConfigBtn"
@@ -76,14 +76,14 @@
                   </div>
                   <br/>
                   <a
-                    href="https://github.com/Stirling-Tools/Stirling-PDF/blob/main/PipelineFeature.md"
+                    href="https://docs.stirlingpdf.com/Advanced%20Configuration/Pipeline"
                     target="_blank"
                     th:text="#{pipeline.help}"
                     >Pipeline Help</a
                   >
                   <br/>
                   <a
-                    href="https://github.com/Stirling-Tools/Stirling-PDF/blob/main/FolderScanning.md"
+                    href="https://docs.stirlingpdf.com/Advanced%20Configuration/Folder%20Scanning"
                     target="_blank"
                     th:text="#{pipeline.scanHelp}"
                     >Folder Scanning Help</a
@@ -164,7 +164,7 @@
                         class="btn btn-danger"
                         th:text="#{delete}"
                       ></button>
-                      
+
                       <button
                         id="saveBrowserPipelineBtn"
                         class="btn btn-success"
@@ -192,7 +192,8 @@
                     </div>
                   </div>
                 </div>
-                <script th:src="@{'/js/pipeline.js'}"></script>\
+                <script th:src="@{'/js/fetch-utils.js'}"></script>
+                <script th:src="@{'/js/pipeline.js'}"></script>
             </div>
           </div>
         </div>

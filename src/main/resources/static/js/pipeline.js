@@ -81,6 +81,8 @@ document.getElementById("submitConfigBtn").addEventListener("click", function ()
   let selectedOperation = document.getElementById("operationsDropdown").value;
 
   var pipelineName = document.getElementById("pipelineName").value;
+
+
   let pipelineList = document.getElementById("pipelineList").children;
   let pipelineConfig = {
     name: pipelineName,
@@ -117,7 +119,7 @@ document.getElementById("submitConfigBtn").addEventListener("click", function ()
   formData.append("json", pipelineConfigJson);
   console.log("formData", formData);
 
-  fetch("api/v1/pipeline/handleData", {
+  fetchWithCsrf("api/v1/pipeline/handleData", {
     method: "POST",
     body: formData,
   })
@@ -152,7 +154,7 @@ let apiDocs = {};
 let apiSchemas = {};
 let operationSettings = {};
 
-fetch("v1/api-docs")
+fetchWithCsrf("v1/api-docs")
   .then((response) => response.json())
   .then((data) => {
     apiDocs = data.paths;
@@ -218,7 +220,8 @@ fetch("v1/api-docs")
 
 document.getElementById('deletePipelineBtn').addEventListener('click', function(event) {
     event.preventDefault();
-    let pipelineName = document.getElementById('pipelineName').value; 
+    let pipelineName = document.getElementById('pipelineName').value;
+
 	if (confirm(deletePipelineText + pipelineName)) {
 		removePipelineFromUI(pipelineName);
 	    let key = "#Pipeline-" + pipelineName;

@@ -1,12 +1,7 @@
 package stirling.software.SPDF.config.security.session;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.session.SessionInformation;
@@ -16,6 +11,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 
 import jakarta.transaction.Transactional;
+import stirling.software.SPDF.config.security.saml2.CustomSaml2AuthenticatedPrincipal;
 import stirling.software.SPDF.model.SessionEntity;
 
 @Component
@@ -50,6 +46,8 @@ public class SessionPersistentRegistry implements SessionRegistry {
             principalName = ((UserDetails) principal).getUsername();
         } else if (principal instanceof OAuth2User) {
             principalName = ((OAuth2User) principal).getName();
+        } else if (principal instanceof CustomSaml2AuthenticatedPrincipal) {
+            principalName = ((CustomSaml2AuthenticatedPrincipal) principal).getName();
         } else if (principal instanceof String) {
             principalName = (String) principal;
         }
@@ -79,11 +77,21 @@ public class SessionPersistentRegistry implements SessionRegistry {
             principalName = ((UserDetails) principal).getUsername();
         } else if (principal instanceof OAuth2User) {
             principalName = ((OAuth2User) principal).getName();
+        } else if (principal instanceof CustomSaml2AuthenticatedPrincipal) {
+            principalName = ((CustomSaml2AuthenticatedPrincipal) principal).getName();
         } else if (principal instanceof String) {
             principalName = (String) principal;
         }
 
         if (principalName != null) {
+            // Clear old sessions for the principal (unsure if needed)
+            //            List<SessionEntity> existingSessions =
+            //                    sessionRepository.findByPrincipalName(principalName);
+            //            for (SessionEntity session : existingSessions) {
+            //                session.setExpired(true);
+            //                sessionRepository.save(session);
+            //            }
+
             SessionEntity sessionEntity = new SessionEntity();
             sessionEntity.setSessionId(sessionId);
             sessionEntity.setPrincipalName(principalName);

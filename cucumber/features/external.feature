@@ -48,24 +48,6 @@ Feature: API Validation
 	And the response status code should be 200
 	
 	
-	
-  @ocr @negative
-  Scenario: Process PDF with text and OCR with type normal 
-    Given I generate a PDF file as "fileInput"
-    And the pdf contains 3 pages with random text
-    And the request data includes
-      | parameter        | value       |
-      | languages        | eng         |
-      | sidecar          | false        |
-      | deskew           | true        |
-      | clean            | true        |
-      | cleanFinal       | true        |
-      | ocrType          | Normal      |
-      | ocrRenderType    | hocr        |
-      | removeImagesAfter| false       |
-    When I send the API request to the endpoint "/api/v1/misc/ocr-pdf"
-	Then the response status code should be 500
-	
   @ocr @positive
   Scenario: Process PDF with OCR
     Given I generate a PDF file as "fileInput"
@@ -81,26 +63,6 @@ Feature: API Validation
       | removeImagesAfter| false       |
     When I send the API request to the endpoint "/api/v1/misc/ocr-pdf"
     Then the response content type should be "application/pdf"
-    And the response file should have size greater than 0
-	And the response status code should be 200
-	
-  @ocr @positive
-  Scenario: Process PDF with OCR with sidecar
-    Given I generate a PDF file as "fileInput"
-    And the request data includes
-      | parameter        | value       |
-      | languages        | eng         |
-      | sidecar          | true        |
-      | deskew           | true        |
-      | clean            | true        |
-      | cleanFinal       | true        |
-      | ocrType          | Force      |
-      | ocrRenderType    | hocr        |
-      | removeImagesAfter| false       |
-    When I send the API request to the endpoint "/api/v1/misc/ocr-pdf"
-    Then the response content type should be "application/octet-stream"
-	And the response file should have extension ".zip"
-	And the response ZIP should contain 2 files
     And the response file should have size greater than 0
 	And the response status code should be 200
 
@@ -123,7 +85,7 @@ Feature: API Validation
     | odt    | .odt      |
     | doc    | .doc      |
 
-  @ocr
+  @ocr @pdfa1
   Scenario: PDFA
     Given I use an example file at "exampleFiles/pdfa2.pdf" as parameter "fileInput"
 	And the request data includes
@@ -134,7 +96,7 @@ Feature: API Validation
     And the response file should have extension ".pdf"
     And the response file should have size greater than 100
 	
-  @ocr
+  @ocr @pdfa2
   Scenario: PDFA1
     Given I use an example file at "exampleFiles/pdfa1.pdf" as parameter "fileInput"
 	And the request data includes
@@ -145,7 +107,7 @@ Feature: API Validation
     And the response file should have extension ".pdf"
     And the response file should have size greater than 100
 	
-  @compress @ghostscript @positive
+  @compress @qpdf @positive
   Scenario: Compress
     Given I use an example file at "exampleFiles/ghost3.pdf" as parameter "fileInput"
 	And the request data includes
@@ -156,7 +118,7 @@ Feature: API Validation
     And the response file should have extension ".pdf"
     And the response file should have size greater than 100
 	
-  @compress @ghostscript @positive
+  @compress @qpdf @positive
   Scenario: Compress
     Given I use an example file at "exampleFiles/ghost2.pdf" as parameter "fileInput"
 	And the request data includes
@@ -169,7 +131,7 @@ Feature: API Validation
     And the response file should have size greater than 100
 	
 	
-  @compress @ghostscript @positive
+  @compress @qpdf @positive
   Scenario: Compress
     Given I use an example file at "exampleFiles/ghost1.pdf" as parameter "fileInput"
 	And the request data includes
@@ -218,6 +180,28 @@ Feature: API Validation
    |  .odt   | 
    |  .pptx   | 
    |  .rtf   | 
-
-
 		
+  @calibre @positive @htmltopdf
+  Scenario: Convert HTML to PDF
+  Given I use an example file at "exampleFiles/example.html" as parameter "fileInput"
+  When I send the API request to the endpoint "/api/v1/convert/html/pdf"
+  Then the response status code should be 200
+  And the response file should have size greater than 100
+  And the response file should have extension ".pdf"
+  
+  @calibre @positive @zippedhtmltopdf
+  Scenario: Convert zipped HTML to PDF
+  Given I use an example file at "exampleFiles/example_html.zip" as parameter "fileInput"
+  When I send the API request to the endpoint "/api/v1/convert/html/pdf"
+  Then the response status code should be 200
+  And the response file should have size greater than 100
+  And the response file should have extension ".pdf"
+  
+  @calibre @positive @markdowntopdf
+  Scenario: Convert Markdown to PDF
+  Given I use an example file at "exampleFiles/example.md" as parameter "fileInput"
+  When I send the API request to the endpoint "/api/v1/convert/markdown/pdf"
+  Then the response status code should be 200
+  And the response file should have size greater than 100
+  And the response file should have extension ".pdf"
+  

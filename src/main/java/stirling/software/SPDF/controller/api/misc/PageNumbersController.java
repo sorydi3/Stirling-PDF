@@ -4,15 +4,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -26,6 +24,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import stirling.software.SPDF.model.api.misc.AddPageNumbersRequest;
+import stirling.software.SPDF.service.CustomPDDocumentFactory;
 import stirling.software.SPDF.utils.GeneralUtils;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
@@ -34,7 +33,12 @@ import stirling.software.SPDF.utils.WebResponseUtils;
 @Tag(name = "Misc", description = "Miscellaneous APIs")
 public class PageNumbersController {
 
-    private static final Logger logger = LoggerFactory.getLogger(PageNumbersController.class);
+    private final CustomPDDocumentFactory pdfDocumentFactory;
+
+    @Autowired
+    public PageNumbersController(CustomPDDocumentFactory pdfDocumentFactory) {
+        this.pdfDocumentFactory = pdfDocumentFactory;
+    }
 
     @PostMapping(value = "/add-page-numbers", consumes = "multipart/form-data")
     @Operation(
@@ -43,6 +47,7 @@ public class PageNumbersController {
                     "This operation takes an input PDF file and adds page numbers to it. Input:PDF Output:PDF Type:SISO")
     public ResponseEntity<byte[]> addPageNumbers(@ModelAttribute AddPageNumbersRequest request)
             throws IOException {
+
         MultipartFile file = request.getFileInput();
         String customMargin = request.getCustomMargin();
         int position = request.getPosition();
@@ -51,8 +56,9 @@ public class PageNumbersController {
         String customText = request.getCustomText();
         int pageNumber = startingNumber;
         byte[] fileBytes = file.getBytes();
-        PDDocument document = Loader.loadPDF(fileBytes);
-
+        PDDocument document = pdfDocumentFactory.load(fileBytes);
+        float font_size = request.getFontSize();
+        String font_type = request.getFontType();
         float marginFactor;
         switch (customMargin.toLowerCase()) {
             case "small":
@@ -73,7 +79,7 @@ public class PageNumbersController {
                 break;
         }
 
-        float fontSize = 12.0f;
+        float fontSize = font_size;
         if (pagesToNumber == null || pagesToNumber.length() == 0) {
             pagesToNumber = "all";
         }
@@ -131,7 +137,20 @@ public class PageNumbersController {
                     new PDPageContentStream(
                             document, page, PDPageContentStream.AppendMode.APPEND, true, true);
             contentStream.beginText();
-            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), fontSize);
+            switch (font_type.toLowerCase()) {
+                case "helvetica":
+                    contentStream.setFont(
+                            new PDType1Font(Standard14Fonts.FontName.HELVETICA), fontSize);
+                    break;
+                case "courier":
+                    contentStream.setFont(
+                            new PDType1Font(Standard14Fonts.FontName.COURIER), fontSize);
+                    break;
+                case "times":
+                    contentStream.setFont(
+                            new PDType1Font(Standard14Fonts.FontName.TIMES_ROMAN), fontSize);
+                    break;
+            }
             contentStream.newLineAtOffset(x, y);
             contentStream.showText(text);
             contentStream.endText();

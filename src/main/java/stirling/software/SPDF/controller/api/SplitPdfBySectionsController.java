@@ -18,8 +18,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.util.Matrix;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -33,6 +32,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import stirling.software.SPDF.model.api.SplitPdfBySectionsRequest;
+import stirling.software.SPDF.service.CustomPDDocumentFactory;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
 @RestController
@@ -40,8 +40,12 @@ import stirling.software.SPDF.utils.WebResponseUtils;
 @Tag(name = "General", description = "General APIs")
 public class SplitPdfBySectionsController {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(SplitPdfBySectionsController.class);
+    private final CustomPDDocumentFactory pdfDocumentFactory;
+
+    @Autowired
+    public SplitPdfBySectionsController(CustomPDDocumentFactory pdfDocumentFactory) {
+        this.pdfDocumentFactory = pdfDocumentFactory;
+    }
 
     @PostMapping(value = "/split-pdf-by-sections", consumes = "multipart/form-data")
     @Operation(
@@ -65,7 +69,7 @@ public class SplitPdfBySectionsController {
                 Filenames.toSimpleFileName(file.getOriginalFilename())
                         .replaceFirst("[.][^.]+$", "");
         if (merge) {
-            MergeController mergeController = new MergeController();
+            MergeController mergeController = new MergeController(pdfDocumentFactory);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             mergeController.mergeDocuments(splitDocuments).save(baos);
             return WebResponseUtils.bytesToWebResponse(baos.toByteArray(), filename + "_split.pdf");
@@ -96,15 +100,13 @@ public class SplitPdfBySectionsController {
 
                 if (sectionNum == horiz * verti) pageNum++;
             }
-        } catch (Exception e) {
-            logger.error("exception", e);
-        } finally {
             data = Files.readAllBytes(zipFile);
+            return WebResponseUtils.bytesToWebResponse(
+                    data, filename + "_split.zip", MediaType.APPLICATION_OCTET_STREAM);
+
+        } finally {
             Files.deleteIfExists(zipFile);
         }
-
-        return WebResponseUtils.bytesToWebResponse(
-                data, filename + "_split.zip", MediaType.APPLICATION_OCTET_STREAM);
     }
 
     public List<PDDocument> splitPdfPages(

@@ -1,12 +1,22 @@
 <div th:fragment="navbar" class="mx-auto">
   <script th:src="@{'/js/languageSelection.js'}"></script>
+  <script th:src="@{'/js/navbar.js'}"></script>
+  <script th:src="@{'/js/additionalLanguageCode.js'}"></script>
+  <script th:inline="javascript">
+    // Initializing the scripts
+    initLanguageSettings();
+    toolsManager();
+  </script>
   <script th:inline="javascript">
     const currentVersion = /*[[${@appVersion}]]*/ '';
     const noFavourites = /*[[#{noFavourites}]]*/ '';
-    const updateAvailable =  /*[[#{settings.updateAvailable}]]*/ '';
+    console.log(noFavourites);
+    const updateAvailable = /*[[#{settings.updateAvailable}]]*/ '';
   </script>
+  <script th:src="@{'/js/homecard.js'}"></script>
   <script th:src="@{'/js/githubVersion.js'}"></script>
-  <nav class="navbar navbar-expand-lg">
+  <form th:action="@{'/dummyFormToPopulateCSRF'}" method="post" enctype="multipart/form-data"></form>
+  <nav class="navbar navbar-expand-xl">
     <div class="container ">
       <a class="navbar-brand" th:href="@{'/'}" style="display: flex;">
         <img class="main-icon" th:src="@{'/favicon.svg'}" alt="icon">
@@ -36,10 +46,10 @@
                   <div class="container-fluid">
                     <div class="row">
                       <!-- Page tools menu items -->
-                      <div class="col-lg-2 col-sm-6 py px-xl-1 px-2">
+                      <div class="navbar-item col-lg-2 col-sm-6 py px-xl-1">
                         <h6 class="menu-title" th:text="#{navbar.sections.organize}"></h6>
                         <div
-                          th:replace="~{fragments/navbarEntry :: navbarEntry ('compress-pdf', 'zoom_in_map', 'home.compressPdfs.title', 'home.compressPdfs.desc', 'compressPdfs.tags', 'advance')}">
+                          th:replace="~{fragments/navbarEntry :: navbarEntry ('multi-tool', 'construction', 'home.multiTool.title', 'home.multiTool.desc', 'multiTool.tags', 'organize')}">
                         </div>
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('merge-pdfs', 'add_to_photos', 'home.merge.title', 'home.merge.desc', 'merge.tags', 'organize')}">
@@ -72,8 +82,9 @@
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('pdf-to-single-page', 'looks_one', 'home.PdfToSinglePage.title', 'home.PdfToSinglePage.desc', 'PdfToSinglePage.tags', 'organize')}">
                         </div>
                       </div>
+                      <div id="stacked" class="navbar-item col-lg-2 col-sm-6 py px-xl-1 px-2"style="display:flex; flex-direction: column;">
                       <!-- Convert to PDF menu items -->
-                      <div class="col-lg-2 col-sm-6 py px-xl-1 px-2">
+                      <div class="navbar-item py px-xl-1 px-2" style="margin-bottom: 1rem;">
                         <h6 class="menu-title" th:text="#{navbar.sections.convertTo}"></h6>
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('img-to-pdf', 'image', 'home.imageToPdf.title', 'home.imageToPdf.desc', 'imageToPdf.tags', 'image')}">
@@ -90,12 +101,12 @@
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('markdown-to-pdf', 'markdown', 'home.MarkdownToPDF.title', 'home.MarkdownToPDF.desc', 'MarkdownToPDF.tags', 'convert')}">
                         </div>
-                         <div
+                        <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('book-to-pdf', 'book', 'home.BookToPDF.title', 'home.BookToPDF.desc', 'BookToPDF.tags', 'convert')}">
                         </div>
                       </div>
                       <!-- Convert from PDF menu items -->
-                      <div class="col-lg-2 col-sm-6 py px-xl-1 px-2">
+                      <div class="navbar-item py px-xl-1">
                         <h6 class="menu-title" th:text="#{navbar.sections.convertFrom}"></h6>
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('pdf-to-img', 'image', 'home.pdfToImage.title', 'home.pdfToImage.desc', 'pdfToImage.tags', 'image')}">
@@ -125,8 +136,9 @@
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('pdf-to-book', 'book', 'home.PDFToBook.title', 'home.PDFToBook.desc', 'PDFToBook.tags', 'convert')}">
                         </div>
                       </div>
+                    </div>
                       <!-- Security menu items -->
-                      <div class="col-lg-2 col-sm-6 py px-xl-1 px-2">
+                      <div class="navbar-item col-lg-2 col-sm-6 py px-xl-1 px-2">
                         <h6 class="menu-title" th:text="#{navbar.sections.security}"></h6>
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('sign', 'signature', 'home.sign.title', 'home.sign.desc', 'sign.tags', 'sign')}">
@@ -147,6 +159,9 @@
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('cert-sign', 'workspace_premium', 'home.certSign.title', 'home.certSign.desc', 'certSign.tags', 'security')}">
                         </div>
                         <div
+			              th:replace="~{fragments/navbarEntry :: navbarEntry('validate-signature','verified','home.validateSignature.title','home.validateSignature.desc','validateSignature.tags','security')}">
+			            </div>
+                        <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('remove-cert-sign', 'remove_moderator', 'home.removeCertSign.title', 'home.removeCertSign.desc', 'removeCertSign.tags', 'security')}">
                         </div>
                         <div
@@ -156,11 +171,14 @@
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('auto-redact', 'ink_eraser', 'home.autoRedact.title', 'home.autoRedact.desc', 'autoRedact.tags', 'security')}">
                         </div>
                         <div
+                          th:replace="~{fragments/navbarEntry :: navbarEntry ('redact', 'ink_eraser', 'home.redact.title', 'home.redact.desc', 'redact.tags', 'security')}">
+                        </div>
+                        <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('stamp', 'approval', 'home.AddStampRequest.title', 'home.AddStampRequest.desc', 'AddStampRequest.tags', 'security')}">
                         </div>
                       </div>
                       <!-- View & Edit menu items -->
-                      <div class="col-lg-2 col-sm-6 py px-xl-1 px-2">
+                      <div class="navbar-item col-lg-2 col-sm-6 py px-xl-1 px-2">
                         <h6 class="menu-title" th:text="#{navbar.sections.edit}"></h6>
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('view-pdf', 'menu_book', 'home.viewPdf.title', 'home.viewPdf.desc', 'viewPdf.tags', 'other')}">
@@ -196,14 +214,17 @@
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('get-info-on-pdf', 'info', 'home.getPdfInfo.title', 'home.getPdfInfo.desc', 'getPdfInfo.tags', 'other')}">
                         </div>
                         <div
-                                th:replace="~{fragments/navbarEntry :: navbarEntry ('remove-image-pdf','remove_selection', 'home.removeImagePdf.title', 'home.removeImagePdf.desc', 'removeImagePdf.tags', 'other')}">
+                          th:replace="~{fragments/navbarEntry :: navbarEntry ('remove-image-pdf','remove_selection', 'home.removeImagePdf.title', 'home.removeImagePdf.desc', 'removeImagePdf.tags', 'other')}">
+                        </div>
+                        <div
+                          th:replace="~{fragments/navbarEntry :: navbarEntry ('replace-and-invert-color-pdf','format_color_fill', 'replace-color.title', 'home.replaceColorPdf.desc', 'replaceColorPdf.tags', 'other')}">
                         </div>
                       </div>
                       <!-- Advance menu items -->
-                      <div class="col-lg-2 col-sm-6 py px-xl-1 px-2">
+                      <div class="navbar-item col-lg-2 col-sm-6 py px-xl-1 px-2">
                         <h6 class="menu-title" th:text="#{navbar.sections.advance}"></h6>
                         <div
-                          th:replace="~{fragments/navbarEntry :: navbarEntry ('multi-tool', 'construction', 'home.multiTool.title', 'home.multiTool.desc', 'multiTool.tags', 'advance')}">
+                          th:replace="~{fragments/navbarEntry :: navbarEntry ('compress-pdf', 'zoom_in_map', 'home.compressPdfs.title', 'home.compressPdfs.desc', 'compressPdfs.tags', 'advance')}">
                         </div>
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('pipeline', 'family_history', 'home.pipeline.title', 'home.pipeline.desc', 'pipeline.tags', 'advance')}">
@@ -225,6 +246,9 @@
                         </div>
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('split-pdf-by-sections', 'grid_on', 'home.split-by-sections.title', 'home.split-by-sections.desc', 'split-by-sections.tags', 'advance')}">
+                        </div>
+                        <div
+                          th:replace="~{fragments/navbarEntry :: navbarEntry ('split-pdf-by-chapters', 'book', 'home.splitPdfByChapters.title', 'home.splitPdfByChapters.desc', 'splitPdfByChapters.tags', 'advance')}">
                         </div>
                         <div
                           th:replace="~{fragments/navbarEntry :: navbarEntry ('split-by-size-or-count', 'vertical_split', 'home.autoSizeSplitPDF.title', 'home.autoSizeSplitPDF.desc', 'autoSizeSplitPDF.tags', 'advance')}">
@@ -296,10 +320,10 @@
           </li> -->
 
         </ul>
-        <ul class="navbar-nav  flex-nowrap">
+        <ul class="navbar-nav flex-nowrap">
           <li class="nav-item dropdown">
             <a class="nav-link" id="navbarDropdown-5" href="#" role="button" data-bs-toggle="dropdown"
-              aria-haspopup="true" aria-expanded="false">
+              aria-haspopup="true" aria-expanded="false" th:title="#{navbar.favorite}">
               <span class="material-symbols-rounded">
                 star
               </span>
@@ -312,7 +336,7 @@
           </div>
           </li>
           <li class="nav-item">
-            <a class="nav-link" id="dark-mode-toggle" href="#">
+            <a class="nav-link" id="dark-mode-toggle" href="#" th:title="#{navbar.darkmode}">
               <span class="material-symbols-rounded" id="dark-mode-icon">
                 dark_mode
               </span>
@@ -321,7 +345,7 @@
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown"
-              aria-haspopup="true" aria-expanded="false">
+              aria-haspopup="true" aria-expanded="false" th:title="#{navbar.language}">
               <span class="material-symbols-rounded">
                 language
               </span>
@@ -337,7 +361,7 @@
           </li>
 
           <li class="nav-item dropdown">
-            <a class="nav-link" href="#" id="searchDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <a class="nav-link" href="#" id="searchDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" th:title="#{navbar.search}">
               <span class="material-symbols-rounded">
                 search
               </span>
@@ -345,8 +369,8 @@
             </a>
             <div class="dropdown-menu dropdown-menu-tp" aria-labelledby="searchDropdown">
               <div class="dropdown-menu-wrapper px-xl-2 px-2">
-                <form class="d-flex p-2 search-form" id="searchForm">
-                  <input class="form-control search-input" type="search" placeholder="Search" aria-label="Search" id="navbarSearchInput">
+                <form th:action="@{''}" class="d-flex p-2 search-form" id="searchForm">
+                  <input class="form-control search-input" type="search" th:placeholder="#{navbar.search}" aria-label="Search" id="navbarSearchInput">
                 </form>
                 <!-- Search Results -->
                 <div id="searchResults" class="search-results scrollable-y dropdown-mw-20"></div>
@@ -354,9 +378,14 @@
             </div>
           </li>
 
+          <li class="nav-item" th:if="${!@runningEE}">
+            <a href="https://stirlingpdf.com/pricing" class="nav-link go-pro-link" target="_blank" rel="noopener noreferrer">
+              <span class="go-pro-badge" th:text="#{enterpriseEdition.button}"></span>
+            </a>
+          </li>
           <li class="nav-item">
             <!-- Settings Button -->
-            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#settingsModal">
+            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#settingsModal" th:title="#{navbar.settings}">
               <span class="material-symbols-rounded">
                 settings
               </span>
@@ -387,20 +416,15 @@
           <p class="mb-0" th:utext="#{settings.appVersion} + ' ' + ${@appVersion}"></p>
           <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
             <div class="footer-center" style="flex-direction: row;">
-              <a href="https://github.com/Stirling-Tools/Stirling-PDF" class="mx-1" role="button"
+              <a href="https://github.com/Stirling-Tools/Stirling-PDF" class="mx-1" role="button" target="_blank"
                 th:title="#{visitGithub}">
                 <img th:src="@{'/images/github.svg'}" alt="github">
               </a>
-              <a href="https://hub.docker.com/r/frooodle/s-pdf" class="mx-1" role="button" th:title="#{seeDockerHub}">
+              <a href="https://hub.docker.com/r/stirlingtools/stirling-pdf" class="mx-1" role="button" target="_blank"th:title="#{seeDockerHub}">
                 <img th:src="@{'/images/docker.svg'}" alt="docker">
               </a>
-              <a href="https://discord.gg/Cn8pWhQRxZ" class="mx-1" role="button" th:title="#{joinDiscord}">
+              <a href="https://discord.gg/Cn8pWhQRxZ" class="mx-1" role="button" target="_blank" th:title="#{joinDiscord}">
                 <img th:src="@{'/images/discord.svg'}" alt="discord">
-              </a>
-              <a href="https://github.com/sponsors/Frooodle" class="mx-1" role="button" th:title="#{donate}">
-                <span class="material-symbols-rounded fill footer-icon" style="font-size: 2.5rem;">
-                  favorite
-                </span>
               </a>
             </div>
 
@@ -420,7 +444,7 @@
             </select>
           </div>
           <div class="mb-3">
-            <label for="zipThreshold" th:utext="#{settings.zipThreshold}"></label>
+            <label for="zipThreshold" th:utext="#{settings.zipThreshold}"></label><br/>
             <input type="range" class="form-range" min="1" max="9" step="1" id="zipThreshold" value="4">
             <span id="zipThresholdValue" class="ms-2"></span>
           </div>

@@ -20,8 +20,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
 import org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,20 +31,28 @@ import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import lombok.extern.slf4j.Slf4j;
 import stirling.software.SPDF.model.api.general.MergePdfsRequest;
+import stirling.software.SPDF.service.CustomPDDocumentFactory;
 import stirling.software.SPDF.utils.GeneralUtils;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
 @RestController
+@Slf4j
 @RequestMapping("/api/v1/general")
 @Tag(name = "General", description = "General APIs")
 public class MergeController {
 
-    private static final Logger logger = LoggerFactory.getLogger(MergeController.class);
+    private final CustomPDDocumentFactory pdfDocumentFactory;
+
+    @Autowired
+    public MergeController(CustomPDDocumentFactory pdfDocumentFactory) {
+        this.pdfDocumentFactory = pdfDocumentFactory;
+    }
 
     // Merges a list of PDDocument objects into a single PDDocument
     public PDDocument mergeDocuments(List<PDDocument> documents) throws IOException {
-        PDDocument mergedDoc = new PDDocument();
+        PDDocument mergedDoc = pdfDocumentFactory.createNewDocument();
         for (PDDocument doc : documents) {
             for (PDPage page : doc.getPages()) {
                 mergedDoc.addPage(page);
@@ -175,7 +182,7 @@ public class MergeController {
                     baos.toByteArray(), mergedFileName); // Return the modified PDF
 
         } catch (Exception ex) {
-            logger.error("Error in merge pdf process", ex);
+            log.error("Error in merge pdf process", ex);
             throw ex;
         } finally {
             for (File file : filesToDelete) {
